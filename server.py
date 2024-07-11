@@ -137,7 +137,7 @@ for db_flight in documents:
     flightId = db_flight['flightId']
     if flightId.startswith("DL"):
         checkBaggage(flightId)
-        
+
     aircode = db_flight['fullData'][25]
     flightnum = db_flight['fullData'][26]
     print(flightId)
@@ -289,7 +289,7 @@ for db_flight in documents:
             else:
                 change = "ahead of schedule"
             amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
-            notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
+            if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
         
         
         if estimatedArrivalTime != db_estimatedArrivalTime:
@@ -300,7 +300,7 @@ for db_flight in documents:
             else:
                 change = "ahead of schedule"
             amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
-            notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
+            if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
 
         print(aircraft, airline, originTZ, originAirport, originCity, originGate, originTerminal, destinationTZ, destinationAirport, destinationCity, destinationGate, destinationTerminal, actualDist, plannedDist, takenDist, speed, altitude, fuel, status, scheduledDepartureTime, estimatedDepartureTime, actualDepartureTime, scheduledArrivalTime, estimatedArrivalTime, actualArrivalTime)
 
