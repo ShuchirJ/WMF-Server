@@ -261,6 +261,13 @@ for db_flight in documents:
 
         infstr = f"from {flight['departureAirport']['iata']} to {flight['arrivalAirport']['iata']}"
 
+        if db_originAirport != originAirport:
+            notify("Stopping Updates", f"Flight {flightId} {infstr} has changed origin airport. Stopping updates for this flight to avoid overwriting it with a new one.")
+            db.update_document("data", "flights", db_flight['$id'], {
+                "fullData": [db_aircraft, db_airline, db_originTZ, db_originAirport, db_originCity, db_originGate, db_originTerminal, db_destinationTZ, db_destinationAirport, db_destinationCity, db_destinationGate, db_destinationTerminal, db_actualDist, db_plannedDist, db_takenDist, db_speed, db_altitude, db_fuel, "historical", db_scheduledDepartureTime, db_estimatedDepartureTime, db_actualDepartureTime, db_scheduledArrivalTime, db_estimatedArrivalTime, db_actualArrivalTime, aircode, flightnum, date],
+            })
+            continue
+
         if db_aircraft != aircraft:
             notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}")
         if db_airline != airline:
