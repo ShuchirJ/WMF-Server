@@ -18,14 +18,25 @@ db = Databases(client)
 
 tn = pytextnow.Client("coolcodersj0", sid_cookie=os.environ['TEXTNOW_SID'], csrf_cookie=os.environ['TEXTNOW_CSRF'])
 
-def notify(title, message):
+def notify(title, message, flightId):
     message = message.replace("<br/>", "\n")
-
     print("MESSAGE:", message)
 
-    tn.send_sms("**********", message)
-    tn.send_sms("**********", message)
-    tn.send_sms("**********", message)
+    flight = db.get_document("data", "flights", flightId)
+    settings = db.get_document("settings", "prefs", flight['userId'])
+    targets = flight['notificationTargets']
+
+    for target in targets:
+        if target.startswith("ntfy"):
+            base = settings['ntfyBase']
+            if not base.endswith("/"): base += "/"
+            r = requests.post(f"{base}{target.split(':')[1]}", headers={
+                "Priority": "urgent",
+                "Title": title,
+                "Tags": "airplane"
+            }, data=message)
+        elif target.startswith("sms"):
+            tn.send_sms(target.split(":")[1], message)
 
 
 requests.get(os.environ['PING_URL'])
@@ -110,10 +121,10 @@ def checkBaggage(flightId):
                 if bag in db_bags:
                     if status not in db_bags[bag]:
                         print("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
-                        notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
+                        notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.", flightId)
                 else:
                     print("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
-                    notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
+                    notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.", flightId)
 
         for bag, data in server_bags_list.items():
             print("SENDING TO DB:", bag)
@@ -137,6 +148,8 @@ for db_flight in documents:
     flightId = db_flight['flightId']
     if flightId.startswith("DL"):
         checkBaggage(flightId)
+    
+    fuuid = db_flight['$id']
 
     aircode = db_flight['fullData'][25]
     flightnum = db_flight['fullData'][26]
@@ -262,32 +275,32 @@ for db_flight in documents:
         infstr = f"from {flight['departureAirport']['iata']} to {flight['arrivalAirport']['iata']}"
 
         if db_originAirport != originAirport:
-            notify("Stopping Updates", f"Flight {flightId} {infstr} has changed origin airport. Stopping updates for this flight to avoid overwriting it with a new one.")
+            notify("Stopping Updates", f"Flight {flightId} {infstr} has changed origin airport. Stopping updates for this flight to avoid overwriting it with a new one.", fuuid)
             db.update_document("data", "flights", db_flight['$id'], {
                 "fullData": [db_aircraft, db_airline, db_originTZ, db_originAirport, db_originCity, db_originGate, db_originTerminal, db_destinationTZ, db_destinationAirport, db_destinationCity, db_destinationGate, db_destinationTerminal, db_actualDist, db_plannedDist, db_takenDist, db_speed, db_altitude, db_fuel, "historical", db_scheduledDepartureTime, db_estimatedDepartureTime, db_actualDepartureTime, db_scheduledArrivalTime, db_estimatedArrivalTime, db_actualArrivalTime, aircode, flightnum, date],
             })
             continue
 
         if db_aircraft != aircraft:
-            notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}")
+            notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}", fuuid)
         if db_airline != airline:
-            notify("Airline Changed", f"{flightId} {infstr} has changed airlines from {db_airline} to {airline}")
+            notify("Airline Changed", f"{flightId} {infstr} has changed airlines from {db_airline} to {airline}", fuuid)
         if db_originAirport != originAirport:
-            notify("Origin Airport Changed", f"{flightId} {infstr} has changed origin airport from {db_originAirport} to {originAirport}")
+            notify("Origin Airport Changed", f"{flightId} {infstr} has changed origin airport from {db_originAirport} to {originAirport}", fuuid)
         if db_originCity != originCity:
-            notify("Origin City Changed", f"{flightId} {infstr} has changed origin city from {db_originCity} to {originCity}")
+            notify("Origin City Changed", f"{flightId} {infstr} has changed origin city from {db_originCity} to {originCity}", fuuid)
         if db_originGate != originGate:
-            notify("Origin Gate Changed", f"{flightId} {infstr} has changed origin gate from {db_originGate} to {originGate}")
+            notify("Origin Gate Changed", f"{flightId} {infstr} has changed origin gate from {db_originGate} to {originGate}", fuuid)
         if db_originTerminal != originTerminal:
-            notify("Origin Terminal Changed", f"{flightId} {infstr} has changed origin terminal from {db_originTerminal} to {originTerminal}")
+            notify("Origin Terminal Changed", f"{flightId} {infstr} has changed origin terminal from {db_originTerminal} to {originTerminal}", fuuid)
         if db_destinationAirport != destinationAirport:
-            notify("Destination Airport Changed", f"{flightId} {infstr} has changed destination airport from {db_destinationAirport} to {destinationAirport}")
+            notify("Destination Airport Changed", f"{flightId} {infstr} has changed destination airport from {db_destinationAirport} to {destinationAirport}", fuuid)
         if db_destinationCity != destinationCity:
-            notify("Destination City Changed", f"{flightId} {infstr} has changed destination city from {db_destinationCity} to {destinationCity}")
+            notify("Destination City Changed", f"{flightId} {infstr} has changed destination city from {db_destinationCity} to {destinationCity}", fuuid)
         if db_destinationGate != destinationGate:
-            notify("Destination Gate Changed", f"{flightId} {infstr} has changed destination gate from {db_destinationGate} to {destinationGate}")
+            notify("Destination Gate Changed", f"{flightId} {infstr} has changed destination gate from {db_destinationGate} to {destinationGate}", fuuid)
         if db_destinationTerminal != destinationTerminal:
-            notify("Destination Terminal Changed", f"{flightId} {infstr} has changed destination terminal from {db_destinationTerminal} to {destinationTerminal}")
+            notify("Destination Terminal Changed", f"{flightId} {infstr} has changed destination terminal from {db_destinationTerminal} to {destinationTerminal}", fuuid)
         if estimatedDepartureTime != db_estimatedDepartureTime:
             change = ""
             #calculate specific difference between times
@@ -296,7 +309,7 @@ for db_flight in documents:
             else:
                 change = "ahead of schedule"
             amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
-            if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
+            if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
         
         
         if estimatedArrivalTime != db_estimatedArrivalTime:
@@ -307,7 +320,7 @@ for db_flight in documents:
             else:
                 change = "ahead of schedule"
             amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
-            if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}")
+            if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
 
         print(aircraft, airline, originTZ, originAirport, originCity, originGate, originTerminal, destinationTZ, destinationAirport, destinationCity, destinationGate, destinationTerminal, actualDist, plannedDist, takenDist, speed, altitude, fuel, status, scheduledDepartureTime, estimatedDepartureTime, actualDepartureTime, scheduledArrivalTime, estimatedArrivalTime, actualArrivalTime)
 
