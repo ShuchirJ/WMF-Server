@@ -181,11 +181,11 @@ for db_flight in documents:
         destinationGate = flight['arrivalAirport']['gate'];
         destinationTerminal = flight['arrivalAirport']['terminal'];
 
-        r2 = requests.get(f"https://www.flightstats.com/v2/api-next/flick/{flight['flightId']}?guid=34b64945a69b9cac:5ae30721:13ca699d305:XXXX&airline={aircode}&flight={flightnum}&limit={yr}-{month}-{day}&rqid=5zddfm823lq")
+        r2 = requests.get(f"https://www.flightstats.com/v2/api-next/flick/{flight['flightId']}?guid=34b64945a69b9cac:5ae30721:13ca699d305:XXXX&airline={aircode}&flight={flightnum}&flightPlan=true&rqid=0gjukufd01k")
         dist = r2.json()['data']
         try:
             print(dist['miniTracker'])
-            print(f"https://www.flightstats.com/v2/api-next/flick/{flight['flightId']}?guid=34b64945a69b9cac:5ae30721:13ca699d305:XXXX&airline={aircode}&flight={flightnum}&limit={yr}-{month}-{day}&rqid=5zddfm823lq")
+            print(f"https://www.flightstats.com/v2/api-next/flick/{flight['flightId']}?guid=34b64945a69b9cac:5ae30721:13ca699d305:XXXX&airline={aircode}&flight={flightnum}&flightPlan=true&rqid=0gjukufd01k")
         except: print("no dist")
         try: actualDist = str(round(dist['miniTracker']['totalKilometers'] * 1.151)) + "mi";
         except: actualDist = "--"
