@@ -386,3 +386,5 @@ for db_flight in documents:
             "runwayTimes": [depRun, arrRun]
         })
 print("END VERSION 8")
+
+#pyinstaller command - pyinstaller --noconfirm --onefile --console --name "WheresMyFlight" --add-data "C:/Users/shuch/WMF-Server/.env;." --add-data "C:/Users/shuch/WMF-Server/pytextnow;pytextnow/"  "C:/Users/shuch/WMF-Server/server.py"
