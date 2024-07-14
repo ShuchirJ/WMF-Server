@@ -1,4 +1,4 @@
-print("START VERSION 7")
+print("START VERSION 8")
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -200,6 +200,32 @@ for db_flight in documents:
         except: altitude = "--"
         fuel = "--"
 
+        depRun = "--"
+        arrRun = "--"
+        baggageClaim = ""
+
+        r3 = requests.get(f"https://www.flightstats.com/v2/api/extendedDetails/{aircode}/{flightnum}/{yr}/{month}/{day}/{flight['flightId']}?rqid=t4u711r6ec")
+        extended = r3.json()
+        try:
+            depTimes = extended['departureTimes']
+            if "estimatedRunway" in depTimes:
+                depRun = f"{depTimes['estimatedRunway']['time']} {depTimes['estimatedRunway']['ampm']} {depTimes['estimatedRunway']['timezone']}"
+            elif "actualRunway" in depTimes:
+                depRun = f"{depTimes['actualRunway']['time']} {depTimes['actualRunway']['ampm']} {depTimes['actualRunway']['timezone']}"
+        except: pass
+
+        try:
+            arrTimes = extended['arrivalTimes']
+            if "estimatedRunway" in arrTimes:
+                arrRun = f"{arrTimes['estimatedRunway']['time']} {arrTimes['estimatedRunway']['ampm']} {arrTimes['estimatedRunway']['timezone']}"
+            elif "actualRunway" in arrTimes:
+                arrRun = f"{arrTimes['actualRunway']['time']} {arrTimes['actualRunway']['ampm']} {arrTimes['actualRunway']['timezone']}"
+        except: pass
+
+        try:
+            baggageClaim = extended['arrivalAirport']['baggage']
+        except: pass
+
         status = flight['flightState'];
         print(flight['schedule'])
         try: scheduledDepartureTime = datetime.strptime(flight['schedule']['scheduledDeparture'], "%Y-%m-%dT%H:%M:%S.%f")
@@ -235,6 +261,9 @@ for db_flight in documents:
                 altitudePoints.append(altitudePoint)
 
         db_aircraft, db_airline, db_originTZ, db_originAirport, db_originCity, db_originGate, db_originTerminal, db_destinationTZ, db_destinationAirport, db_destinationCity, db_destinationGate, db_destinationTerminal, db_actualDist, db_plannedDist, db_takenDist, db_speed, db_altitude, db_fuel, db_status, db_scheduledDepartureTime, db_estimatedDepartureTime, db_actualDepartureTime, db_scheduledArrivalTime, db_estimatedArrivalTime, db_actualArrivalTime, aircode, flightnum, date = db_flight['fullData']
+        db_depRun, db_arrRun = db_flight['runwayTimes']
+        db_baggageClaim = db_flight['baggageClaim']
+
         if db_scheduledDepartureTime and scheduledDepartureTime:
             try: db_scheduledDepartureTime = datetime.strptime(db_scheduledDepartureTime, '%Y-%m-%dT%H:%M:%S.%fZ')
             except: 
@@ -280,6 +309,14 @@ for db_flight in documents:
                 "fullData": [db_aircraft, db_airline, db_originTZ, db_originAirport, db_originCity, db_originGate, db_originTerminal, db_destinationTZ, db_destinationAirport, db_destinationCity, db_destinationGate, db_destinationTerminal, db_actualDist, db_plannedDist, db_takenDist, db_speed, db_altitude, db_fuel, "historical", db_scheduledDepartureTime, db_estimatedDepartureTime, db_actualDepartureTime, db_scheduledArrivalTime, db_estimatedArrivalTime, db_actualArrivalTime, aircode, flightnum, date],
             })
             continue
+
+        if db_depRun != depRun:
+            notify("Departure Runway Changed", f"{flightId} {infstr} has changed departure runway from {db_depRun} to {depRun}", fuuid)
+        if db_arrRun != arrRun:
+            notify("Arrival Runway Changed", f"{flightId} {infstr} has changed arrival runway from {db_arrRun} to {arrRun}", fuuid) 
+
+        if db_baggageClaim != baggageClaim:
+            notify("Baggage Claim Changed", f"{flightId} {infstr} has changed baggage claim from {db_baggageClaim} to {baggageClaim}", fuuid)
 
         if db_aircraft != aircraft:
             notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}", fuuid)
@@ -346,5 +383,6 @@ for db_flight in documents:
             "coordinates": json.dumps(coordinates),
             "speed": json.dumps(speedPoints),
             "altitude": json.dumps(altitudePoints),
+            "runwayTimes": [depRun, arrRun]
         })
-print("END VERSION 7")
+print("END VERSION 8")
