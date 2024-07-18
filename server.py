@@ -1,4 +1,4 @@
-print("START VERSION 8")
+print('START VERSION: 11')
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -310,54 +310,57 @@ for db_flight in documents:
             })
             continue
 
-        if db_depRun != depRun:
+        if depRun and db_depRun != depRun:
             notify("Departure Runway Changed", f"{flightId} {infstr} has changed departure runway from {db_depRun} to {depRun}", fuuid)
-        if db_arrRun != arrRun:
+        if arrRun and db_arrRun != arrRun:
             notify("Arrival Runway Changed", f"{flightId} {infstr} has changed arrival runway from {db_arrRun} to {arrRun}", fuuid) 
 
-        if db_baggageClaim != baggageClaim:
+        if baggageClaim and db_baggageClaim != baggageClaim:
             notify("Baggage Claim Changed", f"{flightId} {infstr} has changed baggage claim from {db_baggageClaim} to {baggageClaim}", fuuid)
 
-        if db_aircraft != aircraft:
+        if aircraft and db_aircraft != aircraft:
             notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}", fuuid)
-        if db_airline != airline:
+        if airline and db_airline != airline:
             notify("Airline Changed", f"{flightId} {infstr} has changed airlines from {db_airline} to {airline}", fuuid)
-        if db_originAirport != originAirport:
+        if originAirport and db_originAirport != originAirport:
             notify("Origin Airport Changed", f"{flightId} {infstr} has changed origin airport from {db_originAirport} to {originAirport}", fuuid)
-        if db_originCity != originCity:
+        if originCity and db_originCity != originCity:
             notify("Origin City Changed", f"{flightId} {infstr} has changed origin city from {db_originCity} to {originCity}", fuuid)
-        if db_originGate != originGate:
+        if originGate and db_originGate != originGate:
             notify("Origin Gate Changed", f"{flightId} {infstr} has changed origin gate from {db_originGate} to {originGate}", fuuid)
-        if db_originTerminal != originTerminal:
+        if originTerminal and db_originTerminal != originTerminal:
             notify("Origin Terminal Changed", f"{flightId} {infstr} has changed origin terminal from {db_originTerminal} to {originTerminal}", fuuid)
-        if db_destinationAirport != destinationAirport:
+        if destinationAirport and db_destinationAirport != destinationAirport:
             notify("Destination Airport Changed", f"{flightId} {infstr} has changed destination airport from {db_destinationAirport} to {destinationAirport}", fuuid)
-        if db_destinationCity != destinationCity:
+        if destinationCity and db_destinationCity != destinationCity:
             notify("Destination City Changed", f"{flightId} {infstr} has changed destination city from {db_destinationCity} to {destinationCity}", fuuid)
-        if db_destinationGate != destinationGate:
+        if destinationGate and db_destinationGate != destinationGate:
             notify("Destination Gate Changed", f"{flightId} {infstr} has changed destination gate from {db_destinationGate} to {destinationGate}", fuuid)
-        if db_destinationTerminal != destinationTerminal:
+        if destinationTerminal and db_destinationTerminal != destinationTerminal:
             notify("Destination Terminal Changed", f"{flightId} {infstr} has changed destination terminal from {db_destinationTerminal} to {destinationTerminal}", fuuid)
-        if estimatedDepartureTime != db_estimatedDepartureTime:
+        if estimatedDepartureTime and estimatedDepartureTime != db_estimatedDepartureTime:
             change = ""
             #calculate specific difference between times
-            if estimatedDepartureTime > db_scheduledDepartureTime:
-                change = "delayed"
-            else:
-                change = "ahead of schedule"
-            amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
-            if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
+            if estimatedDepartureTime and db_scheduledDepartureTime:
+                print(estimatedDepartureTime, db_scheduledDepartureTime)
+                if estimatedDepartureTime > db_scheduledDepartureTime:
+                    change = "delayed"
+                else:
+                    change = "ahead of schedule"
+                amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
+                if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
         
         
-        if estimatedArrivalTime != db_estimatedArrivalTime:
+        if estimatedArrivalTime and estimatedArrivalTime != db_estimatedArrivalTime:
             change = ""
             #calculate specific difference between times
-            if estimatedArrivalTime > db_scheduledArrivalTime:
-                change = "delayed"
-            else:
-                change = "ahead of schedule"
-            amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
-            if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
+            if estimatedArrivalTime and db_scheduledArrivalTime:
+                if estimatedArrivalTime > db_scheduledArrivalTime:
+                    change = "delayed"
+                else:
+                    change = "ahead of schedule"
+                amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
+                if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
 
         print(aircraft, airline, originTZ, originAirport, originCity, originGate, originTerminal, destinationTZ, destinationAirport, destinationCity, destinationGate, destinationTerminal, actualDist, plannedDist, takenDist, speed, altitude, fuel, status, scheduledDepartureTime, estimatedDepartureTime, actualDepartureTime, scheduledArrivalTime, estimatedArrivalTime, actualArrivalTime)
 
@@ -368,10 +371,6 @@ for db_flight in documents:
         if estimatedDepartureTime: estimatedDepartureTime = estimatedDepartureTime.isoformat()
         if actualDepartureTime: actualDepartureTime = actualDepartureTime.isoformat()
 
-        if not originGate: originGate = db_originGate
-        if not destinationGate: destinationGate = db_destinationGate
-        if not originTerminal: originTerminal = db_originTerminal
-        if not destinationTerminal: destinationTerminal = db_destinationTerminal    
 
         db.update_document("data", "flights", db_flight['$id'], {
             "airport": [flight['departureAirport']['iata'], flight['arrivalAirport']['iata']],
@@ -385,6 +384,4 @@ for db_flight in documents:
             "altitude": json.dumps(altitudePoints),
             "runwayTimes": [depRun, arrRun]
         })
-print("END VERSION 8")
-
-#pyinstaller command - pyinstaller --noconfirm --onefile --console --name "WheresMyFlight" --add-data "C:/Users/shuch/WMF-Server/.env;." --add-data "C:/Users/shuch/WMF-Server/pytextnow;pytextnow/"  "C:/Users/shuch/WMF-Server/server.py"
+print('END VERSION: 11')
