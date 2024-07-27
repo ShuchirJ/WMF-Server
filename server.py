@@ -1,4 +1,4 @@
-print('START VERSION: 13')
+print('START VERSION: 18')
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -67,88 +67,180 @@ def checkBaggage(flightId):
     #print(boardingcard)
     for card in boardingcard:
         #print(card)
-        code = card['deltacode']
+        code = card['confcode']
+        lastname = card['data'][2:].split("/")[0]
         print("precode", code, "flight", flightId)
         if code in doneCode: continue
         doneCode.append(code)
         print("code", code)
-        lastname = card['data'][2:].split("/")[0]
-        payload = json.dumps({
-        "bagRequestDetails": {
-            "requestType": "REC_LOC",
-            "recordLocatorId": code,
-            "lastName": lastname.title()
-        }
-        })
-        headers = {
-        'content-type': 'application/json',
-        'Host': 'www.delta.com',
-        'User-Agent': 'Python/Requests',
-        }
-        server_bags = requests.request("POST", "https://www.delta.com/baggage/baggageStatus", headers=headers, data=payload).json()
-        print(server_bags)
-        server_bags_list = {}
-        if "passengerBags" not in server_bags: return
-        for passenger in server_bags['passengerBags']:
-            for bag in passenger['bags']:
-                server_bags_list[bag['bagTagNum']] = {
-                    "name": passenger['passenger']['firstName'] + " " + passenger['passenger']['lastName'],
-                    "status": []
-                }
-        
-        for bag in server_bags['bagHistoryList']:
-            for status in bag['bagStatuses']:
-                server_bags_list[bag['bagTagNum']]['status'].append({
-                    "airport": status['airportCode'],
-                    "time": status['statusDtTm'],
-                    "details": status['statusDetails']
-                })
-        
-        print(server_bags_list)
-        allbaggage = db.list_documents("data", "bags", queries=[Query.equal("flightId", flightId)])['documents']
-        db_bagtags = []
-        db_bags = {}
-        for bag in allbaggage:
-            db_status = json.loads(bag['status'])
-            tag = bag['id']
-            db_bagtags.append(tag)
-            db_bags[tag] = db_status
-        
-        for bag, data in server_bags_list.items():
-            server_status = data['status']
-            print("\n\nserver status", server_status, "\n\n")
-            for status in server_status:
-                if bag in db_bags:
-                    if status not in db_bags[bag]:
+
+        flight = db.get_document("data", "flights", flightId)
+        userId = flight['userId']
+        airline = flight['iata-code']
+        if airline == "DL":
+            payload = json.dumps({
+            "bagRequestDetails": {
+                "requestType": "REC_LOC",
+                "recordLocatorId": code,
+                "lastName": lastname.title()
+            }
+            })
+            headers = {
+            'content-type': 'application/json',
+            'Host': 'www.delta.com',
+            'User-Agent': 'Python/Requests',
+            }
+            server_bags = requests.request("POST", "https://www.delta.com/baggage/baggageStatus", headers=headers, data=payload).json()
+            print(server_bags)
+            server_bags_list = {}
+            if "passengerBags" not in server_bags: return
+            for passenger in server_bags['passengerBags']:
+                for bag in passenger['bags']:
+                    server_bags_list[bag['bagTagNum']] = {
+                        "name": passenger['passenger']['firstName'] + " " + passenger['passenger']['lastName'],
+                        "status": []
+                    }
+            
+            for bag in server_bags['bagHistoryList']:
+                for status in bag['bagStatuses']:
+                    server_bags_list[bag['bagTagNum']]['status'].append({
+                        "airport": status['airportCode'],
+                        "time": status['statusDtTm'],
+                        "details": status['statusDetails']
+                    })
+            
+            print(server_bags_list)
+            allbaggage = db.list_documents("data", "bags", queries=[Query.equal("flightId", flightId)])['documents']
+            db_bagtags = []
+            db_bags = {}
+            for bag in allbaggage:
+                db_status = json.loads(bag['status'])
+                tag = bag['id']
+                db_bagtags.append(tag)
+                db_bags[tag] = db_status
+            
+            for bag, data in server_bags_list.items():
+                server_status = data['status']
+                print("\n\nserver status", server_status, "\n\n")
+                for status in server_status:
+                    if bag in db_bags:
+                        if status not in db_bags[bag]:
+                            print("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
+                            notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.", flightId)
+                    else:
                         print("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
                         notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.", flightId)
-                else:
-                    print("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.")
-                    notify("Baggage Status Update", f"Baggage {bag} for passenger {data['name']} has been updated. It is now at {status['airport']} with status {status['details']} at {status['time']}.", flightId)
 
-        for bag, data in server_bags_list.items():
-            print("SENDING TO DB:", bag)
-            if bag not in db_bagtags:
-                db.create_document("data", "bags", "unique()", {
-                    "flightId": flightId,
-                    "id": bag,
-                    "status": json.dumps(data['status']),
-                    "name": data['name']
-                })
-            else:
-                db_id = db.list_documents("data", "bags",  queries=[Query.equal("id", bag)])['documents'][0]['$id']
-                db.update_document("data", "bags", db_id, {
-                    "status": json.dumps(data['status']),
-                    "name": data['name']
-                })
-            print("BAG DONE:", bag)
+            for bag, data in server_bags_list.items():
+                print("SENDING TO DB:", bag)
+                if bag not in db_bagtags:
+                    db.create_document("data", "bags", "unique()", {
+                        "flightId": flightId,
+                        "id": bag,
+                        "status": json.dumps(data['status']),
+                        "name": data['name']
+                    }, [
+                        f'read("user:{userId}")f', 
+                        f'write("user:{userId}")f'
+                    ])
+                else:
+                    db_id = db.list_documents("data", "bags",  queries=[Query.equal("id", bag)])['documents'][0]['$id']
+                    db.update_document("data", "bags", db_id, {
+                        "status": json.dumps(data['status']),
+                        "name": data['name']
+                    })
+                print("BAG DONE:", bag)
+        
+        elif airline == "UA":
+            print("united")
+            payload = json.dumps({
+            "bagTagId": "",
+            "deeplinkUrlPath": "null",
+            "lastNames": lastname.title(),
+            "logAll": False,
+            "mileagePlusAccountNumber": "",
+            "recordLocator": code,
+            "accessCode": "ACCESSCODE",
+            "application": {
+                "id": 2,
+                "isProduction": False,
+                "name": "Android",
+                "version": {
+                "major": "4.2.10",
+                "minor": "4.2.10"
+                }
+            },
+            "deviceId": "b0a98d98-847d-46bd-9fe6-511afe846e2b",
+            "languageCode": "en-US",
+            "transactionId": "b0a98d98-847d-46bd-9fe6-511afe846e2b|a5467ea7-a111-418e-a00f-0868f86b70f1"
+            })
+            headers = {
+            'X_DEVICE_ID': 'b0a98d98-847d-46bd-9fe6-511afe846e2b',
+            'X_APP_ID': '2',
+            'X_APP_MAJOR': '4.2.10',
+            'Content-Type': 'application/json',
+            }
+
+            response = requests.post("https://mobiletravelapi.united.com/bagtrackingservice/api/GetBagTrackingDetails", headers=headers, data=payload).json()
+            bags = response['bagsDetails']
+            db_bags = get_all_docs("data", "bags", queries=[Query.equal("flightId", flightId)])
+            for bag in bags:
+                details = bag['displayBagTrackDetails'][0]
+                bagTag = details['bagTagNumber']
+                try:
+                    dbBag = next(item for item in db_bags if item['id'] == bagTag)
+                except:
+                    dbBag = {
+                        "status": "[]"
+                    }
+
+                s_statuses = details['displayBagTrackStatuses']
+                for s in s_statuses:
+                    status = {
+                        "time": "",
+                        "airport": s['bagFlightSegmentInfo'],
+                        "details": s['bagStatusInfo']
+                    }
+
+                    if status not in json.loads(dbBag['status']):
+                        notify("Baggage Status Update", f"Baggage {bagTag} has been updated. It is now at {status['airport']} with status {status['details']}", flightId)
+                        print("Baggage Status Update", f"Baggage {bagTag} has been updated. It is now at {status['airport']} with status {status['details']}")
+
+                if bagTag not in [x['id'] for x in db_bags]:
+                    db.create_document("data", "bags", "unique()", {
+                        "flightId": flightId,
+                        "id": bagTag,
+                        "status": json.dumps([{
+                            "time": "",
+                            "airport": s['bagFlightSegmentInfo'],
+                            "details": s['bagStatusInfo']
+                        } for s in s_statuses]),
+                        "name": bag['passenger']['givenName'] + " " + bag['passenger']['sirName']
+                    }, [
+                        f'read("user:{userId}")', 
+                        f'write("user:{userId}")'
+                    ])
+                else:
+                    db_id = next(item for item in db_bags if item['id'] == bagTag)['$id']
+                    db.update_document("data", "bags", db_id, {
+                        "status": json.dumps([{
+                            "time": "",
+                            "airport": s['bagFlightSegmentInfo'],
+                            "details": s['bagStatusInfo']
+                        } for s in s_statuses]),
+                        "name": bag['passenger']['givenName'] + " " + bag['passenger']['sirName']
+                    })
+
+                    print("BAG DONE:", bagTag)
+
 
 for db_flight in documents:
-    if db_flight['fullData'][18] == "historical": continue
     flightId = db_flight['flightId']
-    if flightId.startswith("DL"):
-        checkBaggage(flightId)
-    
+    if flightId.startswith("DL") or flightId.startswith("UA"):
+        checkBaggage(db_flight['$id'])
+
+    if db_flight['fullData'][18] == "historical": continue
+
     fuuid = db_flight['$id']
 
     aircode = db_flight['fullData'][25]
@@ -381,4 +473,4 @@ for db_flight in documents:
             "runwayTimes": [depRun, arrRun],
             "baggageClaim": baggageClaim
         })
-print('END VERSION: 13')
+print('END VERSION: 18')

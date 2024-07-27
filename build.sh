@@ -1,4 +1,4 @@
-VERSION=13
+VERSION=18
 tail -n +2 "server.py" > "server.py.tmp" && mv "server.py.tmp" "server.py"
 sed -i '$ d' server.py
 CONTENT=`cat server.py`
