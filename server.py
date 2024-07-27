@@ -1,4 +1,4 @@
-print('START VERSION: 11')
+print('START VERSION: 13')
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -304,10 +304,6 @@ for db_flight in documents:
         infstr = f"from {flight['departureAirport']['iata']} to {flight['arrivalAirport']['iata']}"
 
         if db_originAirport != originAirport:
-            notify("Stopping Updates", f"Flight {flightId} {infstr} has changed origin airport. Stopping updates for this flight to avoid overwriting it with a new one.", fuuid)
-            db.update_document("data", "flights", db_flight['$id'], {
-                "fullData": [db_aircraft, db_airline, db_originTZ, db_originAirport, db_originCity, db_originGate, db_originTerminal, db_destinationTZ, db_destinationAirport, db_destinationCity, db_destinationGate, db_destinationTerminal, db_actualDist, db_plannedDist, db_takenDist, db_speed, db_altitude, db_fuel, "historical", db_scheduledDepartureTime, db_estimatedDepartureTime, db_actualDepartureTime, db_scheduledArrivalTime, db_estimatedArrivalTime, db_actualArrivalTime, aircode, flightnum, date],
-            })
             continue
 
         if depRun and db_depRun != depRun:
@@ -382,6 +378,7 @@ for db_flight in documents:
             "coordinates": json.dumps(coordinates),
             "speed": json.dumps(speedPoints),
             "altitude": json.dumps(altitudePoints),
-            "runwayTimes": [depRun, arrRun]
+            "runwayTimes": [depRun, arrRun],
+            "baggageClaim": baggageClaim
         })
-print('END VERSION: 11')
+print('END VERSION: 13')
