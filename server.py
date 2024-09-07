@@ -184,7 +184,8 @@ def checkBaggage(flightId):
             'Content-Type': 'application/json',
             }
 
-            response = requests.post("https://mobiletravelapi.united.com/bagtrackingservice/api/GetBagTrackingDetails", headers=headers, data=payload).json()
+            try: response = requests.post("https://mobiletravelapi.united.com/bagtrackingservice/api/GetBagTrackingDetails", headers=headers, data=payload).json()
+            except: continue
             bags = response['bagsDetails']
             db_bags = get_all_docs("data", "bags", queries=[Query.equal("flightId", flightId)])
             for bag in bags:
