@@ -33,7 +33,13 @@ def notify(title, message, flightId):
                 "Tags": "airplane"
             }, data=message)
         elif target.startswith("sms"):
-            requests.post(f"https://{os.environ['TEXT_GATEWAY']}/text/{target.split(':')[1]}", json={"msg": message})
+            requests.post(f"https://api.contiguity.co/send/text", body={
+                "to": "+1" + target.split(':')[1],
+                "message": message
+            }, headers={
+                "Authorization": f"Token {os.environ['CONTIGUITY_KEY']}",
+                "Content-Type": "application/json"
+            })
 
 
 requests.get(os.environ['PING_URL'])
