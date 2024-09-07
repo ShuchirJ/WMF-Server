@@ -4,7 +4,6 @@ from appwrite.services.databases import Databases
 from appwrite.query import Query
 import requests, json, time
 from datetime import datetime
-import pytextnow
 from dotenv import load_dotenv
 import os
 
@@ -15,8 +14,6 @@ client = (Client()
     .set_project('wheresmyflight')                # Your project ID
     .set_key(os.environ['APPWRITE_KEY']))          # Your secret API key
 db = Databases(client)
-
-tn = pytextnow.Client("coolcodersj0", sid_cookie=os.environ['TEXTNOW_SID'], csrf_cookie=os.environ['TEXTNOW_CSRF'])
 
 def notify(title, message, flightId):
     message = message.replace("<br/>", "\n")
@@ -36,7 +33,7 @@ def notify(title, message, flightId):
                 "Tags": "airplane"
             }, data=message)
         elif target.startswith("sms"):
-            tn.send_sms(target.split(":")[1], message)
+            requests.post(f"https://{os.environ['TEXT_GATEWAY']}/text/{target.split(':')[1]}", json={"msg": message})
 
 
 requests.get(os.environ['PING_URL'])
