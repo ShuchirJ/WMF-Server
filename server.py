@@ -35,7 +35,7 @@ def notify(title, message, flightId):
         elif target.startswith("sms"):
             requests.post(f"https://api.contiguity.co/send/text", json={
                 "to": "+1" + target.split(':')[1],
-                "message": "WheresMyFlight: " + message
+                "message": "WMF: " + message
             }, headers={
                 "Authorization": f"Token {os.environ['CONTIGUITY_KEY']}",
                 "Content-Type": "application/json"
