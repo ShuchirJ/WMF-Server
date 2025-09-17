@@ -33,11 +33,11 @@ def notify(title, message, flightId):
                 "Tags": "airplane"
             }, data=message)
         elif target.startswith("sms"):
-            requests.post(f"https://api.contiguity.co/send/text", json={
+            requests.post(f"https://api.contiguity.com/send/text", json={
                 "to": "+1" + target.split(':')[1],
                 "message": "WMF: " + message
             }, headers={
-                "Authorization": f"Token {os.environ['CONTIGUITY_KEY']}",
+                "Authorization": f"Bearer {os.environ['CONTIGUITY_KEY']}",
                 "Content-Type": "application/json"
             })
 
@@ -93,7 +93,8 @@ def checkBaggage(flightId):
             'Host': 'www.delta.com',
             'User-Agent': 'Python/Requests',
             }
-            server_bags = requests.request("POST", "https://www.delta.com/baggage/baggageStatus", headers=headers, data=payload).json()
+            try: server_bags = requests.request("POST", "https://www.delta.com/baggage/baggageStatus", headers=headers, data=payload).json()
+            except: continue
             print(server_bags)
             server_bags_list = {}
             if "passengerBags" not in server_bags: return
