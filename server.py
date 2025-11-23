@@ -1,4 +1,4 @@
-print('START VERSION: 18')
+print('START VERSION: 19')
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.query import Query
@@ -238,10 +238,86 @@ def checkBaggage(flightId):
 
                     print("BAG DONE:", bagTag)
 
+        elif airline == "B6":
+            print("Jetblue")
+
+            r = requests.get(f"https://jetblue-smartnotify-prod-api.azurewebsites.net/api/Events/GetEncryptedString?surname={lastname}&pnr={code}")
+            token = r.text
+            print("token", token)
+
+            url = "https://jetblue-smartnotify-prod-api.azurewebsites.net/api/Events/GetPassengerInformation"
+            payload = json.dumps({
+            "encryptedRequest": token,
+            "pnr": code,
+            "surname": lastname
+            })
+            headers = {
+            'Content-Type': 'application/json'
+            }
+            trip = requests.request("POST", url, headers=headers, data=payload).json()
+            print(trip)
+            bags = []
+            for passenger in trip["passengers"]:
+                for bag in passenger['bags']:
+                    bag['name'] = passenger['passengerName']
+                    bags.append(bag)
+        
+
+            db_bags = get_all_docs("data", "bags", queries=[Query.equal("flightId", flightId)])
+            for bag in bags:
+                bagTag = bag['baggageTagNumber']
+                try:
+                    dbBag = next(item for item in db_bags if item['id'] == bagTag)
+                except:
+                    dbBag = {
+                        "status": "[]"
+                    }
+
+                s_statuses = bag['events']
+                status_2 = []
+                for s in s_statuses:
+                    detailLine = ""
+                    if s['type'] == "BagAcceptedDeclaration":
+                        detailLine = "Bag Accepted at Check-In"
+                    elif s['type'] == "BagSeenAtStationDeclaration":
+                        detailLine = "Bag Seen at " + s['stationCode']
+                    elif s['type'] == "BagLoadedOnAircraftDeclaration":
+                        detailLine = "Bag Loaded onto Aircraft"
+                     
+                    status = {
+                        "time": datetime.fromisoformat(s['timestamp'].split(".")[0]).strftime("%I:%M %p") + " UTC",
+                        "airport": s['stationCode'],
+                        "details": detailLine
+                    }
+                    status_2.append(status)
+
+                    if status not in json.loads(dbBag['status']):
+                        notify("Baggage Status Update", f"Bag Update for {bagTag} - {status['details']}", flightId)
+                        print("Baggage Status Update", f"Bag Update for {bagTag} - {status['details']}")
+
+                if bagTag not in [x['id'] for x in db_bags]:
+                    db.create_document("data", "bags", "unique()", {
+                        "flightId": flightId,
+                        "id": bagTag,
+                        "status": json.dumps(status_2),
+                        "name": bag['name']
+                    }, [
+                        f'read("user:{userId}")', 
+                        f'write("user:{userId}")'
+                    ])
+                else:
+                    db_id = next(item for item in db_bags if item['id'] == bagTag)['$id']
+                    db.update_document("data", "bags", db_id, {
+                        "status": json.dumps(status_2),
+                        "name": bag['name']
+                    })
+
+                    print("BAG DONE:", bagTag)
+
 
 for db_flight in documents:
     flightId = db_flight['flightId']
-    if flightId.startswith("DL") or flightId.startswith("UA"):
+    if flightId.startswith("DL") or flightId.startswith("UA") or flightId.startswith("B6"):
         checkBaggage(db_flight['$id'])
 
     if db_flight['fullData'][18] == "historical": continue
@@ -419,30 +495,30 @@ for db_flight in documents:
                                 if db_originAirport != originAirport:
                                     continue
 
-                                if depRun and db_depRun != depRun:
-                                    notify("Departure Runway Changed", f"{flightId} {infstr} has changed departure runway from {db_depRun} to {depRun}", fuuid)
-                                if arrRun and db_arrRun != arrRun:
-                                    notify("Arrival Runway Changed", f"{flightId} {infstr} has changed arrival runway from {db_arrRun} to {arrRun}", fuuid) 
+                                # if depRun and db_depRun != depRun:
+                                #     notify("Departure Runway Changed", f"{flightId} {infstr} has changed departure runway from {db_depRun} to {depRun}", fuuid)
+                                # if arrRun and db_arrRun != arrRun:
+                                #     notify("Arrival Runway Changed", f"{flightId} {infstr} has changed arrival runway from {db_arrRun} to {arrRun}", fuuid) 
 
                                 if baggageClaim and db_baggageClaim != baggageClaim:
                                     notify("Baggage Claim Changed", f"{flightId} {infstr} has changed baggage claim from {db_baggageClaim} to {baggageClaim}", fuuid)
 
-                                if aircraft and db_aircraft != aircraft:
-                                    notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}", fuuid)
-                                if airline and db_airline != airline:
-                                    notify("Airline Changed", f"{flightId} {infstr} has changed airlines from {db_airline} to {airline}", fuuid)
-                                if originAirport and db_originAirport != originAirport:
-                                    notify("Origin Airport Changed", f"{flightId} {infstr} has changed origin airport from {db_originAirport} to {originAirport}", fuuid)
-                                if originCity and db_originCity != originCity:
-                                    notify("Origin City Changed", f"{flightId} {infstr} has changed origin city from {db_originCity} to {originCity}", fuuid)
+                                # if aircraft and db_aircraft != aircraft:
+                                #     notify("Aircraft Changed", f"{airline} {flightId} {infstr} has changed aircraft from {db_aircraft} to {aircraft}", fuuid)
+                                # if airline and db_airline != airline:
+                                #     notify("Airline Changed", f"{flightId} {infstr} has changed airlines from {db_airline} to {airline}", fuuid)
+                                # if originAirport and db_originAirport != originAirport:
+                                #     notify("Origin Airport Changed", f"{flightId} {infstr} has changed origin airport from {db_originAirport} to {originAirport}", fuuid)
+                                # if originCity and db_originCity != originCity:
+                                #     notify("Origin City Changed", f"{flightId} {infstr} has changed origin city from {db_originCity} to {originCity}", fuuid)
                                 if originGate and db_originGate != originGate:
                                     notify("Origin Gate Changed", f"{flightId} {infstr} has changed origin gate from {db_originGate} to {originGate}", fuuid)
                                 if originTerminal and db_originTerminal != originTerminal:
                                     notify("Origin Terminal Changed", f"{flightId} {infstr} has changed origin terminal from {db_originTerminal} to {originTerminal}", fuuid)
-                                if destinationAirport and db_destinationAirport != destinationAirport:
-                                    notify("Destination Airport Changed", f"{flightId} {infstr} has changed destination airport from {db_destinationAirport} to {destinationAirport}", fuuid)
-                                if destinationCity and db_destinationCity != destinationCity:
-                                    notify("Destination City Changed", f"{flightId} {infstr} has changed destination city from {db_destinationCity} to {destinationCity}", fuuid)
+                                # if destinationAirport and db_destinationAirport != destinationAirport:
+                                #     notify("Destination Airport Changed", f"{flightId} {infstr} has changed destination airport from {db_destinationAirport} to {destinationAirport}", fuuid)
+                                # if destinationCity and db_destinationCity != destinationCity:
+                                #     notify("Destination City Changed", f"{flightId} {infstr} has changed destination city from {db_destinationCity} to {destinationCity}", fuuid)
                                 if destinationGate and db_destinationGate != destinationGate:
                                     notify("Destination Gate Changed", f"{flightId} {infstr} has changed destination gate from {db_destinationGate} to {destinationGate}", fuuid)
                                 if destinationTerminal and db_destinationTerminal != destinationTerminal:
@@ -457,7 +533,7 @@ for db_flight in documents:
                                         else:
                                             change = "ahead of schedule"
                                         amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
-                                        if amtchange.total_seconds() > 0: notify("Estimated Departure Time Changed", f"{flightId} {infstr} has changed estimated departure time from {db_scheduledDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
+                                        if amtchange.total_seconds() > 300: notify("Estimated Departure Time Changed", f"{flightId} {infstr} is {change} by {amtchange}, departing at {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}", fuuid)
                                 
                                 
                                 if estimatedArrivalTime and estimatedArrivalTime != db_estimatedArrivalTime:
@@ -469,7 +545,7 @@ for db_flight in documents:
                                         else:
                                             change = "ahead of schedule"
                                         amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
-                                        if amtchange.total_seconds() > 0: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} has changed estimated arrival time from {db_scheduledArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')} to {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}. It is {change} by {amtchange}", fuuid)
+                                        if amtchange.total_seconds() > 300: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} is {change} by {amtchange}, arriving at {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}", fuuid)
 
                                 print(aircraft, airline, originTZ, originAirport, originCity, originGate, originTerminal, destinationTZ, destinationAirport, destinationCity, destinationGate, destinationTerminal, actualDist, plannedDist, takenDist, speed, altitude, fuel, status, scheduledDepartureTime, estimatedDepartureTime, actualDepartureTime, scheduledArrivalTime, estimatedArrivalTime, actualArrivalTime)
 
@@ -501,4 +577,4 @@ for db_flight in documents:
     else:
         continue
 
-print('END VERSION: 18')
+print('END VERSION: 19')

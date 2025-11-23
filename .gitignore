@@ -1,2 +1,6 @@
 .env
 log.txt
+nohup.out
+__pycache__/
+*.pyc
+.vscode/
