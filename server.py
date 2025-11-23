@@ -523,6 +523,16 @@ for db_flight in documents:
                                     notify("Destination Gate Changed", f"{flightId} {infstr} has changed destination gate from {db_destinationGate} to {destinationGate}", fuuid)
                                 if destinationTerminal and db_destinationTerminal != destinationTerminal:
                                     notify("Destination Terminal Changed", f"{flightId} {infstr} has changed destination terminal from {db_destinationTerminal} to {destinationTerminal}", fuuid)
+                                
+                                def format_duration(seconds: int) -> str:
+                                    hours = seconds // 3600
+                                    minutes = (seconds % 3600) // 60
+
+                                    if hours > 0:
+                                        return f"{hours} hr {minutes} min"
+                                    else:
+                                        return f"{minutes} min"
+                                
                                 if estimatedDepartureTime and estimatedDepartureTime != db_estimatedDepartureTime:
                                     change = ""
                                     #calculate specific difference between times
@@ -533,7 +543,7 @@ for db_flight in documents:
                                         else:
                                             change = "ahead of schedule"
                                         amtchange = abs(estimatedDepartureTime - db_scheduledDepartureTime)
-                                        if amtchange.total_seconds() > 300: notify("Estimated Departure Time Changed", f"{flightId} {infstr} is {change} by {amtchange}, departing at {estimatedDepartureTime.strftime('%m/%d/%Y %I:%M:%S %p')}", fuuid)
+                                        if amtchange.total_seconds() > 300: notify("Estimated Departure Time Changed", f"{flightId} {infstr} is {change} by {format_duration(amtchange.total_seconds())}, departing at {estimatedDepartureTime.strftime('%b. %d %I:%M %p')}", fuuid)
                                 
                                 
                                 if estimatedArrivalTime and estimatedArrivalTime != db_estimatedArrivalTime:
@@ -545,7 +555,7 @@ for db_flight in documents:
                                         else:
                                             change = "ahead of schedule"
                                         amtchange = abs(estimatedArrivalTime - db_scheduledArrivalTime)
-                                        if amtchange.total_seconds() > 300: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} is {change} by {amtchange}, arriving at {estimatedArrivalTime.strftime('%m/%d/%Y %I:%M:%S %p')}", fuuid)
+                                        if amtchange.total_seconds() > 300: notify("Estimated Arrival Time Changed", f"{flightId} {infstr} is {change} by {format_duration(amtchange.total_seconds())}, arriving at {estimatedArrivalTime.strftime('%b. %d %I:%M %p')}", fuuid)
 
                                 print(aircraft, airline, originTZ, originAirport, originCity, originGate, originTerminal, destinationTZ, destinationAirport, destinationCity, destinationGate, destinationTerminal, actualDist, plannedDist, takenDist, speed, altitude, fuel, status, scheduledDepartureTime, estimatedDepartureTime, actualDepartureTime, scheduledArrivalTime, estimatedArrivalTime, actualArrivalTime)
 
